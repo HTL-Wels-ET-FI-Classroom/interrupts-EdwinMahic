@@ -35,7 +35,11 @@ static int GetTouchState (int *xCoord, int *yCoord);
 void SysTick_Handler(void)
 {
 	HAL_IncTick();
+
 }
+
+
+
 
 /**
  * @brief  The application entry point.
@@ -73,6 +77,14 @@ int main(void)
 	LCD_DisplayStringAtLineMode(39, "copyright xyz", CENTER_MODE);
 
 	int cnt = 0;
+
+	GPIO_InitTypeDef user;
+	user.Alternate= 0;
+	user.Mode=GPIO_MODE_IT_RISING;
+	user.Pin = GPIO_PIN_0;
+
+	HAL_NVIC_EnableIRQ(IRQn);
+
 	/* Infinite loop */
 	while (1)
 	{
