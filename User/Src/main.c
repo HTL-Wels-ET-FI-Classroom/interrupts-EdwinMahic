@@ -26,8 +26,12 @@
 /* Private variables ---------------------------------------------------------*/
 
 /* Private function prototypes -----------------------------------------------*/
-static int GetUserButtonPressed(void);
-static int GetTouchState (int *xCoord, int *yCoord);
+
+
+
+volatile int timer=0;
+volatile int colour=0;
+
 
 /**
  * @brief This function handles System tick timer.
@@ -37,13 +41,18 @@ void SysTick_Handler(void)
 	HAL_IncTick();
 
 }
-
-
+void EXTI0_IRQHandler(void){
+	__HAL_GPIO_EXTI_CLEAR_IT(GPIO_PIN_0);
+	timer = ! timer;
+}
+void EXTI3_IRQHandler(void){
+	__HAL_GPIO_EXTI_CLEAR_IT(GPIO_PIN_3);
+	colour = ! colour;
+}
 
 
 /**
- * @brief  The application entry point.
- * @retval int
+
  */
 int main(void)
 {
@@ -52,6 +61,11 @@ int main(void)
 	HAL_Init();
 	/* Configure the system clock */
 	SystemClock_Config();
+
+
+	int cnt=0;
+	int cnt1=0;
+
 
 	/* Initialize LCD and touch screen */
 	LCD_Init();
@@ -73,17 +87,33 @@ int main(void)
 	printf("   A-4600 Wels");
 
 	LCD_SetFont(&Font8);
-	LCD_SetColors(LCD_COLOR_MAGENTA, LCD_COLOR_BLACK); // TextColor, BackColor
-	LCD_DisplayStringAtLineMode(39, "copyright xyz", CENTER_MODE);
+	LCD_SetColors(LCD_COLOR_DARKBLUE, LCD_COLOR_BLACK); // TextColor, BackColor
+	LCD_DisplayStringAtLineMode(39, "copyright Mahic", CENTER_MODE);
 
-	int cnt = 0;
 
 	GPIO_InitTypeDef user;
 	user.Alternate= 0;
 	user.Mode=GPIO_MODE_IT_RISING;
 	user.Pin = GPIO_PIN_0;
+	HAL_GPIO_Init(GPIOA, &user);
 
-	HAL_NVIC_EnableIRQ(IRQn);
+	GPIO_InitTypeDef led;
+	led.Alternate=0;
+	led.Mode=GPIO_MODE_OUTPUT_PP;
+	led.Pull=GPIO_NOPULL;
+	led.Speed=GPIO_SPEED_MEDIUM;
+	led.Pin = GPIO_PIN_13;
+	HAL_GPIO_Init(GPIOG, &led);
+	HAL_NVIC_EnableIRQ(EXTI0_IRQn);
+
+	GPIO_InitTypeDef clr;
+	clr.Alternate=0;
+	clr.Mode=GPIO_MODE_IT_RISING;
+	clr.Pull=GPIO_PULLDOWN;
+	clr.Speed=GPIO_SPEED_MEDIUM;
+	HAL_GPIO_Init(GPIOC, &clr);
+	clr.Pin = GPIO_PIN_3;
+
 
 	/* Infinite loop */
 	while (1)
@@ -92,18 +122,24 @@ int main(void)
 		HAL_Delay(100);
 
 		// display timer
-		cnt++;
+
 		LCD_SetFont(&Font20);
-		LCD_SetTextColor(LCD_COLOR_BLUE);
-		LCD_SetPrintPosition(5, 0);
-		printf("   Timer: %.1f", cnt/10.0);
 
-		// test touch interface
-		int x, y;
-		if (GetTouchState(&x, &y)) {
-			LCD_FillCircle(x, y, 5);
+
+
+		LCD_SetPrintPosition(7, 0);
+		printf("   Timer1: %.2f", cnt/10.0);
+		LCD_SetPrintPosition(10, 0);
+		printf("   Timer2: %.2f", cnt1/10.0);
+
+		if(timer==0){
+			cnt++;
+
+
+		}if(timer==1){
+			cnt1++;
+
 		}
-
 
 	}
 }
@@ -113,33 +149,7 @@ int main(void)
  * @param none
  * @return 1 if user button input (PA0) is high
  */
-static int GetUserButtonPressed(void) {
-	return (GPIOA->IDR & 0x0001);
-}
 
-/**
- * Check if touch interface has been used
- * @param xCoord x coordinate of touch event in pixels
- * @param yCoord y coordinate of touch event in pixels
- * @return 1 if touch event has been detected
- */
-static int GetTouchState (int* xCoord, int* yCoord) {
-	void    BSP_TS_GetState(TS_StateTypeDef *TsState);
-	TS_StateTypeDef TsState;
-	int touchclick = 0;
 
-	TS_GetState(&TsState);
-	if (TsState.TouchDetected) {
-		*xCoord = TsState.X;
-		*yCoord = TsState.Y;
-		touchclick = 1;
-		if (TS_IsCalibrationDone()) {
-			*xCoord = TS_Calibration_GetX(*xCoord);
-			*yCoord = TS_Calibration_GetY(*yCoord);
-		}
-	}
-
-	return touchclick;
-}
 
 
